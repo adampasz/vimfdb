@@ -8,10 +8,12 @@ let s:defaultFDBInitPath = '~/.fdbinit'
 " BreakPointColor ctermfg=white btermbg=lightblue cterm=bold
 sign define fdb_breakpoint text=* texthl=Special
 
-command! -nargs=0 FDBLaunch call FDBLaunch()
-command! -nargs=0 FDBReset call FDBReset()
-command! -nargs=0 FDBSetBreakPoint call FDBSetBreakPoint()
-command! -nargs=0 FDBLoadBreakPoints call FDBLoadBreakPoints()
+command! -nargs=0 FDBLaunch call s:launch()
+command! -nargs=0 FDBReset call s:reset()
+command! -nargs=0 FDBSetBreakPoint call s:setBreakPoint()
+command! -nargs=0 FDBUnsetBreakPoint call s:unsetBreakPoint()
+command! -nargs=0 FDBLoadBreakPoints call s:loadBreakPoints()
+"TODO: FDBToggleBreakPoint
 
 if !exists('g:fdbInitPath')
 	let g:fdbInitPath = s:defaultFDBInitPath
@@ -21,16 +23,25 @@ if !exists('g:launchFDBCommand')
 	let g:launchFDBCommand = '!fdb'
 endif
 
-function! FDBSetBreakPoint()
+function! s:setBreakPoint()
 	let l = 'b ' . expand('%:t') . ":" . line(".")
 	echo 'ADDING: ' . l . ' to ' . g:fdbInitPath
 	let b = "'/run/{print; print \"" . l . "\"; next}1' " . g:fdbInitPath
 	exe 'silent !awk ' . b . ' > tmp && mv tmp ' . g:fdbInitPath
-	call FDBPlaceBreakPoint(line("."))
+	call s:drawBreakPoint(line("."))
+endfunction
+"TODO: Deal with duplicate BPs...
+
+function! s:unsetBreakPoint()
+	call s:eraseBreakPoint(line("."))
+	let pattern="'" . expand('%:t') . ":" . line(".") . "'"
+	let cmd='!grep -v ' . pattern . ' ' . g:fdbInitPath . ' > temp.tmp && mv temp.tmp ' . g:fdbInitPath
+	echo cmd
+	silent exe cmd
 endfunction
 
 " Load breakpoints for current file
-function! FDBLoadBreakPoints()
+function! s:loadBreakPoints()
 	let filename = expand('%:t')
 	let cmd = "'$1 ~/b/ $2 ~/" . filename . "/ {split($2, a, \":\"); ORS=\",\"; print a[2]}'"
 	redir @a
@@ -40,25 +51,34 @@ function! FDBLoadBreakPoints()
 	"need to pull last line from result. Not sure why awk command gets added to result. :/
 	let a = split(result[len(result)-1],',')
 	for i in a
-		call FDBDrawBreakPoint(i)
+		call s:drawBreakPoint(i)
 	endfor
+	"TODO: Use var instead of register
 endfunction
 
 " Clear all breakpoints
-function! FDBReset()
+function! s:reset()
 	exe '!echo -e "run\ncontinue" > ' . g:fdbInitPath
-	exe 'sign unplace 1'
+	exe 'sign unplace *'
 	exe 'echo "done"'	
 endfunction
 
-function! FDBLaunch()
+function! s:launch()
 	if g:fdbInitPath != s:defaultFDBInitPath
 		exe 'silent !cp ' . g:fdbInitPath . ' ' . s:defaultFDBInitPath
 	endif
 	exe g:launchFDBCommand
 endfunction
 
-function! FDBDrawBreakPoint(lineNumber)
-   	exe 'sign place 1 name=fdb_breakpoint line=' . a:lineNumber . ' buffer=' . bufnr('%')	
+function! s:drawBreakPoint(lineNumber)
+   	exe 'sign place ' . a:lineNumber . ' name=fdb_breakpoint line=' . a:lineNumber . ' buffer=' . bufnr('%')	
 endfunction
 
+function! s:eraseBreakPoint(lineNumber)
+	exe 'sign unplace ' . a:lineNumber . ' buffer=' . bufnr('%')
+endfunction
+
+"TODO: We'll probably need a sign dictionary soon...
+
+" echo "$(awk '!/OzMain.as\:90/' fdbinit.txt)" > fdbinit.txt
+" http://stackoverflow.com/questions/8019617/how-to-write-finding-output-to-same-file-using-awk-command
