@@ -4,6 +4,8 @@ endif
 
 let g:loadedVIMFDB = 1
 let s:defaultFDBInitPath = '~/.fdbinit'
+let s:pluginPath = fnamemodify(resolve(expand('<sfile>:p')), ':h')
+let s:shCommand = '!' . s:pluginPath . '/vimfdb.sh'
 
 " BreakPointColor ctermfg=white btermbg=lightblue cterm=bold
 sign define fdb_breakpoint text=* texthl=Special
@@ -24,20 +26,14 @@ if !exists('g:launchFDBCommand')
 endif
 
 function! s:setBreakPoint()
-	let l = 'b ' . expand('%:t') . ":" . line(".")
-	echo 'ADDING: ' . l . ' to ' . g:fdbInitPath
-	let b = "'/run/{print; print \"" . l . "\"; next}1' " . g:fdbInitPath
-	exe 'silent !awk ' . b . ' > tmp && mv tmp ' . g:fdbInitPath
+	call s:exeShellSilent('setBreakPoint',  expand('%:t'), line('.'))
 	call s:drawBreakPoint(line("."))
 endfunction
 "TODO: Deal with duplicate BPs...
 
 function! s:unsetBreakPoint()
+	call s:exeShellSilent('unsetBreakPoint', expand('%:t'), line('.'))
 	call s:eraseBreakPoint(line("."))
-	let pattern="'" . expand('%:t') . ":" . line(".") . "'"
-	let cmd='!grep -v ' . pattern . ' ' . g:fdbInitPath . ' > temp.tmp && mv temp.tmp ' . g:fdbInitPath
-	echo cmd
-	silent exe cmd
 endfunction
 
 " Load breakpoints for current file
@@ -58,7 +54,7 @@ endfunction
 
 " Clear all breakpoints
 function! s:reset()
-	exe '!echo -e "run\ncontinue" > ' . g:fdbInitPath
+	call s:exeShell('reset')
 	exe 'sign unplace *'
 	exe 'echo "done"'	
 endfunction
@@ -76,6 +72,22 @@ endfunction
 
 function! s:eraseBreakPoint(lineNumber)
 	exe 'sign unplace ' . a:lineNumber . ' buffer=' . bufnr('%')
+endfunction
+
+function! s:exeShell(fName, ...)
+	let cmd = s:shCommand . ' ' . a:fName . ' ' . g:fdbInitPath
+	for i in a:000
+		let cmd = cmd . ' ' . i	
+	endfor
+	exe cmd
+endfunction
+
+function! s:exeShellSilent(fName, ...)
+	let cmd = 'silent ' . s:shCommand . ' ' . a:fName . ' ' . g:fdbInitPath
+	for i in a:000
+		let cmd = cmd . ' ' . i	
+	endfor
+	exe cmd
 endfunction
 
 "TODO: We'll probably need a sign dictionary soon...
