@@ -24,7 +24,7 @@ endif
 if !exists('g:launchFDBCommand')
 	let g:launchFDBCommand = '!fdb'
 	" in my .vrimrc:
-	" let g:launchFDBCommand = 'AsyncCommand ' . g:fdbPluginPath . '/start_fdb.sh'
+	" autocmd VimEnter * let g:launchFDBCommand = 'AsyncCommand ' . g:fdbPluginPath . '/start_fdb.sh
 endif
 
 function! s:setBreakPoint()
@@ -41,13 +41,15 @@ endfunction
 " Load breakpoints for current file
 function! s:loadBreakPoints()
 	redir => output 
-	call APZExeShell('loadBreakPoints', expand('%:t'))
+	call APZExeShellSilent('loadBreakPoints', expand('%:t'))
 	redir END
 	let result = split(output, '\n')
 	"need to pull last line from result, since it's picking up all shell output
 	let a = split(result[len(result)-1],',')
 	for i in a
-		call s:drawBreakPoint(i)
+		if i != -1
+			call s:drawBreakPoint(i)
+		endif
 	endfor
 endfunction
 

@@ -13,7 +13,7 @@ setBreakPoint() {
 }
 
 loadBreakPoints() {
-	awk -v filename=$2 '$1 ~/b/ $2 ~filename {split($2, a, ":"); ORS=","; print a[2]}' $1
+	awk -v filename=$2 'BEGIN {count=0} $1 ~/b/ $2 ~filename {split($2, a, ":"); ORS=","; count++; print a[2]} END {if (count < 1) print -1}' $1
 }
 
 # call arguments verbatim:
