@@ -28,6 +28,9 @@ if !exists('g:launchFDBCommand')
 endif
 
 function! s:setBreakPoint()
+	if !filereadable(expand(g:fdbInitPath))
+       		call s:reset()	
+	endif
 	call APZExeShellSilent('setBreakPoint',  expand('%:t'), line('.'))
 	call s:drawBreakPoint(line("."))
 endfunction
@@ -40,6 +43,9 @@ endfunction
 
 " Load breakpoints for current file
 function! s:loadBreakPoints()
+	if !filereadable(expand(g:fdbInitPath))
+       		call s:reset()	
+	endif
 	redir => output 
 	call APZExeShellSilent('loadBreakPoints', expand('%:t'))
 	redir END
