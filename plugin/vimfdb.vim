@@ -73,11 +73,17 @@ function! s:launch()
 endfunction
 
 function! s:drawBreakPoint(lineNumber)
+	if &filetype == 'javascript'
+		exe ":normal Idebugger;\<CR>\<ESC>k"
+	endif
    	exe 'sign place ' . a:lineNumber . ' name=fdb_breakpoint line=' . a:lineNumber . ' buffer=' . bufnr('%')	
 endfunction
 
 function! s:eraseBreakPoint(lineNumber)
 	exe 'sign unplace ' . a:lineNumber . ' buffer=' . bufnr('%')
+	if &filetype == 'javascript' && getline('.') =~ 'debugger;'
+		exe ":normal dd"
+	endif
 endfunction
 
 "UTILITIES
